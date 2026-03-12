@@ -18,7 +18,7 @@ DB = {
 def get_q_key():
     try:
         # İnternet hatası veya IBM meşguliyeti durumunda sistemin çökmemesi için try-except şart
-        service = QiskitRuntimeService(channel="ibm_quantum_platform", token="FL3f9A65VPZxOusXSIIPZA8fXGNUNvXvHdk3TVJRvcuC")
+        service = QiskitRuntimeService(channel="ibm_quantum_platform", token=os.getenv("IBM_KEY"))
         backend = service.least_busy(operational=True, simulator=False)
         qc = QuantumCircuit(1); qc.h(0); qc.measure_all()
         t_qc = transpile(qc, backend=backend)
@@ -106,4 +106,5 @@ def read_chat(sender):
 if __name__ == '__main__':
     # Render'ın atayacağı portu kullanabilmesi için
     port = int(os.environ.get("PORT", 5000))
+
     app.run(host='0.0.0.0', port=port)
