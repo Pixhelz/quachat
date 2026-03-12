@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Q-CHAT | Quantum Secured Terminal</title>
+    <style>
+        :root { --green: #00ff41; --bg: #050505; --dark: #0a0a0a; --gray: #555; }
+        
+        body { 
+            background: var(--bg); color: var(--green); font-family: 'Courier New', monospace; 
+            display: flex; height: 100vh; margin: 0; overflow: hidden; 
+        }
+
+        /* Sol Panel - Sohbet Listesi */
+        #sidebar { 
+            width: 300px; border-right: 1px solid var(--green); 
+            display: flex; flex-direction: column; background: var(--dark);
+        }
+        
+        .sidebar-header { 
+            padding: 20px; border-bottom: 1px solid var(--green); 
+            display: flex; justify-content: space-between; align-items: center; 
+        }
+
+        .logout-btn { 
+            color: #ff4444; text-decoration: none; border: 1px solid #ff4444; 
+            padding: 3px 8px; font-size: 0.7rem; text-transform: uppercase;
+        }
+
+        #contact-list { flex: 1; overflow-y: auto; }
+        
+        .contact { 
+            padding: 15px 20px; border-bottom: 1px solid #111; cursor: pointer; 
+            transition: 0.3s; display: flex; align-items: center; gap: 10px;
+        }
+        .contact:hover { background: #111; }
+        .contact.active { background: #002200; border-left: 4px solid var(--green); }
+        .online-dot { width: 8px; height: 8px; background: var(--green); border-radius: 50%; }
+
+        .new-chat-area { padding: 15px; border-top: 1px solid var(--green); }
+        .new-chat-area input { 
+            width: 100%; background: #000; border: 1px solid var(--green); 
+            color: #fff; padding: 8px; box-sizing: border-box; margin-bottom: 10px; 
+        }
+
+        /* Sağ Panel - Mesajlaşma Alanı */
+        #main { flex: 1; display: flex; flex-direction: column; background: #000; }
+        
+        #chat-header { 
+            padding: 15px 25px; border-bottom: 1px solid #111; 
+            font-size: 1.1rem; letter-spacing: 1px;
+        }
+
+        #chat-box { 
+            flex: 1; padding: 25px; overflow-y: auto; 
+            display: flex; flex-direction: column; gap: 10px;
+        }
+
+        .msg { max-width: 70%; padding: 10px 15px; border-radius: 5px; font-size: 0.9rem; line-height: 1.4; }
+        .msg.received { background: #111; align-self: flex-start; border: 1px solid var(--gray); }
+        .msg.sent { background: #002200; align-self: flex-end; border: 1px solid var(--green); color: #fff; }
+
+        .system-msg { 
+            text-align: center; color: var(--gray); font-size: 0.7rem; 
+            margin: 20px 0; text-transform: uppercase; letter-spacing: 2px;
+        }
+
+        /* Mesaj Giriş Alanı */
+        #input-area { 
+            padding: 20px; border-top: 1px solid #111; 
+            display: flex; gap: 15px; background: var(--dark);
+        }
+        #msgInput { 
+            flex: 1; background: #000; border: 1px solid var(--green); 
+            color: #fff; padding: 12px; outline: none; 
+        }
+        #sendBtn { 
+            background: var(--green); color: #000; border: none; 
+            padding: 0 25px; font-weight: bold; cursor: pointer; 
+        }
+        #sendBtn:disabled { background: var(--gray); cursor: not-allowed; }
+
+        /* Kaydırma Çubuğu */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-thumb { background: var(--green); }
+    </style>
+</head>
+<body>
+
+    <div id="sidebar">
+        <div class="sidebar-header">
+            <span>ID: <b>{{ user }}</b></span>
+            <a href="/logout" class="logout-btn">Çıkış</a>
+        </div>
+        
+        <div id="contact-list">
+            </div>
+
+        <div class="new-chat-area">
+            <input type="text" id="targetUser" placeholder="Kime yazacaksın?">
+            <button onclick="startNewChat()" style="width:100%; background:transparent; color:var(--green); border:1px solid var(--green); padding:5px; cursor:pointer;">SOHBET BAŞLAT</button>
+        </div>
+    </div>
+
+    <div id="main">
+        <div id="chat-header">Bir sohbet seçin veya yeni bir bağlantı kurun...</div>
+        
+        <div id="chat-box">
+            <div class="system-msg">Kuantum Güvenli Hat Bekleniyor...</div>
+        </div>
+
+        <div id="input-area" style="visibility: hidden;">
+            <input type="text" id="msgInput" placeholder="Mesajını mühürle..." autocomplete="off">
+            <button id="sendBtn" onclick="sendMsg()">GÖNDER</button>
+        </div>
+    </div>
+
+    <script>
+        let activeChat = "";
+
+        // Mesaj Gönderenleri Yenile (Sol Liste)
+        async function refreshContacts() {
+            try {
+                const res = await fetch('/get_chats');
+                const data = await res.json();
+                const list = document.getElementById('contact-list');
+                
+                list.innerHTML = data.chats.map(c => `
+                    <div class="contact ${activeChat === c ? 'active' : ''}" onclick="selectChat('${c}')">
+                        <div class="online-dot"></div>
+                        <span>${c}</span>
+                    </div>
+                `).join('');
+            } catch (e) { console.error("Liste yenilenemedi."); }
+        }
+
+        // Yeni Sohbet Başlat
+        function startNewChat() {
+            const user = document.getElementById('targetUser').value.trim();
+            if(!user) return;
+            selectChat(user);
+        }
+
+        // Sohbet Seç ve Mesajları Oku
+        async function selectChat(user) {
+            activeChat = user;
+            document.getElementById('chat-header').innerText = `Tünel: ${user} @ IBM-Quantum`;
+            document.getElementById('input-area').style.visibility = "visible";
+            
+            // Mesajları çek (Python tarafında çekildiği an silinecek)
+            const res = await fetch(`/read_chat/${user}`);
+            const data = await res.json();
+            
+            const box = document.getElementById('chat-box');
+            box.innerHTML = data.messages.map(m => `
+                <div class="msg received">${m}</div>
+            `).join('');
+            
+            if(data.messages.length > 0) {
+                box.innerHTML += `<div class="system-msg">Mesajlar okundu ve imha edildi.</div>`;
+            } else {
+                box.innerHTML = `<div class="system-msg">Yeni sohbet başlatıldı.</div>`;
+            }
+            box.scrollTop = box.scrollHeight;
+            refreshContacts();
+        }
+
+        // Mesaj Gönder (Gerçek Zamanlı Şifreleme)
+        async function sendMsg() {
+            const msgInput = document.getElementById('msgInput');
+            const btn = document.getElementById('sendBtn');
+            const text = msgInput.value.trim();
+            
+            if(!text || !activeChat) return;
+
+            btn.disabled = true;
+            btn.innerText = "MÜHÜRLENİYOR...";
+
+            try {
+                await fetch('/send', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({text: text, to: activeChat})
+                });
+                
+                // Mesaj kutusuna gönderildiğini göster
+                const box = document.getElementById('chat-box');
+                box.innerHTML += `<div class="msg sent">${text}</div>`;
+                msgInput.value = '';
+                box.scrollTop = box.scrollHeight;
+            } catch (e) {
+                alert("Kuantum hatası!");
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "GÖNDER";
+            }
+        }
+
+        // Enter tuşu desteği
+        document.getElementById('msgInput').addEventListener("keypress", (e) => {
+            if(e.key === "Enter") sendMsg();
+        });
+
+        // Periyodik Kontrol
+        setInterval(refreshContacts, 5000);
+        refreshContacts();
+    </script>
+</body>
+</html>

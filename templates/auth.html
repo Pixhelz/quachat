@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>Q-CHAT | Güvenli Giriş</title>
+    <style>
+        :root { --green: #00ff41; --bg: #050505; }
+        body { background: var(--bg); color: var(--green); font-family: monospace; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .auth-card { border: 1px solid var(--green); padding: 30px; width: 300px; text-align: center; }
+        input { width: 100%; background: #000; border: 1px solid var(--green); color: #fff; padding: 10px; margin: 10px 0; box-sizing: border-box; }
+        button { width: 100%; background: var(--green); color: #000; border: none; padding: 12px; font-weight: bold; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+<div class="auth-card">
+    <h2 id="title">GİRİŞ YAP</h2>
+    <input type="text" id="username" placeholder="Kullanıcı Adı">
+    <input type="password" id="password" placeholder="Şifre">
+    <button onclick="submitAuth()" id="authBtn">ERİŞİM SAĞLA</button>
+    <p id="toggleTxt" style="cursor:pointer; font-size:0.8rem; margin-top:15px;" onclick="toggleMode()">Hesabın yok mu? Kayıt Ol</p>
+</div>
+
+<script>
+    let mode = 'login';
+
+    function toggleMode() {
+        mode = (mode === 'login') ? 'register' : 'login';
+        document.getElementById('title').innerText = (mode === 'login') ? 'GİRİŞ YAP' : 'YENİ KAYIT';
+        document.getElementById('toggleTxt').innerText = (mode === 'login') ? 'Hesabın yok mu? Kayıt Ol' : 'Zaten üye misin? Giriş Yap';
+    }
+
+    async function submitAuth() {
+        const user = document.getElementById('username').value;
+        const pass = document.getElementById('password').value;
+        const btn = document.getElementById('authBtn');
+
+        if(!user || !pass) return alert("Boş bırakma kanka!");
+
+        btn.disabled = true;
+        btn.innerText = "BAĞLANILIYOR...";
+
+        try {
+            console.log("İstek gönderiliyor:", mode);
+            const res = await fetch('/auth', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({type: mode, user: user, pass: pass})
+            });
+
+            const data = await res.json();
+            console.log("Sunucu yanıtı:", data);
+
+            if (res.ok && data.status === "ok") {
+                // YÖNLENDİRME BURADA YAPILIYOR
+                window.location.replace("/"); 
+            } else {
+                alert("Sistem Yanıtı: " + (data.status || "Bilinmeyen Hata"));
+                btn.disabled = false;
+                btn.innerText = "ERİŞİM SAĞLA";
+            }
+        } catch (e) {
+            console.error("Hata detayı:", e);
+            alert("Sunucuya bağlanılamadı! Terminale bak kanka.");
+            btn.disabled = false;
+            btn.innerText = "TEKRAR DENE";
+        }
+    }
+</script>
+</body>
+</html>

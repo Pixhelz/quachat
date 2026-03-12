@@ -1,0 +1,4 @@
+flask
+qiskit-ibm-runtime
+cryptography
+gunicorn
