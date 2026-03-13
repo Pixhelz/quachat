@@ -154,7 +154,10 @@
             
             const box = document.getElementById('chat-box');
             box.innerHTML = data.messages.map(m => `
-                <div class="msg received">${m}</div>
+                <div class="msg received">
+                    ${m.text} 
+                    <span class="time">${m.time} | Decrypted</span>
+                </div>
             `).join('');
             
             if(data.messages.length > 0) {
@@ -207,4 +210,5 @@
         refreshContacts();
     </script>
 </body>
+
 </html>
